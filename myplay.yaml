@@ -1,0 +1,69 @@
+ansible-playbook myplay.yaml -i inventoryfile --check
+---
+- name: play1
+  hosts: all
+  become: true
+  gather_facts: false
+  serial:
+    - 1
+    - 5
+    - 10
+    - 50%
+  tasks:
+    - name: install git
+      apt:
+        name: git
+        state: present
+    - name: install multiple packages
+      apt:
+        name: "{{ items }}"
+        state: present
+        when: ansible_facts["Distribution"] == "Ubuntu"
+        when: ansible_os_family == "Ubuntu"
+      with_items:
+        - wget
+        - curl
+        - net-tools
+      loop:
+        - wget
+        - curl
+        - net-tools
+      - name: create a file in remote hosts
+        file:
+          name: /home/ubuntu/ansible/file.txt
+          state: touch
+          owner: user_name
+          mode: '0755'
+      - name: create a directory in remote hosts
+        file:
+          name: /home/ubuntu/directory1
+          state: directory
+          mode: '744'
+          owner: user_name
+      - name: copy file to remote hosts
+        copy:
+          src: /home/ubuntu/file
+          dest: /home/ubuntu/directory1
+      - name: copy file from remote to ansible host for backup
+        copy:
+          src: /home/ubuntu/directory1
+          dest: /home/ubuntu/directory
+          remote_src: true
+      - name: to fetch directory and files from remote to host
+        find:
+          paths: /home/ubuntu/directory
+          file_type: file
+          register: remote_files
+      - fetch:
+          src: "{{ item.path }}"
+          dest: /home/ubuntu/
+          flat: yes
+        loop: "{{ remote_files.files }}"
+      - name: pwd
+        command: pwd
+        register: output_var
+      - name: print output
+        debug:
+          msg: current working directory is {{ output_var.stdout_lines }}
+          var: output_var.stdout_lines
+      - name: 
